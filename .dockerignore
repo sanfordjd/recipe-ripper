@@ -1,0 +1,9 @@
+# Send only the files needed to build the app.
+**
+!Dockerfile
+!.dockerignore
+!requirements-hosting.txt
+!app.py
+!docker-entrypoint.sh
+!templates/
+!templates/index.html
