@@ -64,7 +64,7 @@ Deletion requires sign-in and a valid form token. Both people who share the coll
 
 ## Local setup on Windows
 
-The project virtual environment `.venv` is already set up. Flask 3.1.3, Beautiful Soup 4.15.0, Waitress 3.0.2, and Playwright 1.65.2 are installed there. Playwright's Chromium browser is installed under `.venv/browsers`. For this copy of the app, skip the installation commands and start with the password and app secret commands below.
+The project virtual environment `.venv` is already set up. Flask 3.1.3, Beautiful Soup 4.15.0, Waitress 3.0.2, Playwright 1.65.2, and the Psycopg 3.3.9 Postgres driver are installed there. Playwright's Chromium browser is installed under `.venv/browsers`. For this copy of the app, skip the installation commands and start with the password and app secret commands below.
 
 These commands create an isolated package folder named `.venv`. They do not publish the website. Obtain permission before running them if your workspace rules require approval for new files.
 
@@ -104,17 +104,23 @@ Browser setup references: https://playwright.dev/python/docs/browsers and https:
 
 ## Export and hosting
 
-Start with [HOSTING.md](HOSTING.md). It explains which hosting features to search for, how to supply your private settings, and what to check after your first deployment.
+Start with [HOSTING.md](HOSTING.md), which now provides the Vercel setup sequence: connect Neon Postgres, configure Production secrets, update the Git repository, and deploy the Container runtime.
 
-The export is `recipe-ripper-hosting.zip`. Extract it and give the extracted source files to a provider that builds Docker web apps. Keep `Dockerfile` beside `app.py` at the top level of the source repository or upload.
+The updated export is `recipe-ripper-hosting.zip`. It includes `vercel.json` with `"framework": "container"` so Vercel uses the Dockerfile instead of automatically selecting the Flask runtime.
 
-The package includes an official Playwright browser image, the app code, pinned Python dependencies in `requirements-hosting.txt`, and a startup script. It initializes the mounted data directory, then runs the app and browser as an ordinary user. The local Windows virtual environment and browser are not included in the ZIP.
+When `DATABASE_URL` or the older `POSTGRES_URL` is set, recipes use hosted Postgres. The app creates its recipe table on first connection, uses bound query values, and locks selected rows during a confirmed batch deletion. The container startup uses writable `/tmp` space for the browser and does not initialize a local data mount in this mode. On Vercel, a Postgres URL is required.
 
-For this Docker package, attach a persistent disk at `/var/data`, keep `DATABASE_PATH=/var/data/recipes.sqlite3`, and set `APP_SECRET_KEY` and `APP_PASSWORD_HASH` in the host's private environment settings. Use HTTPS and keep `COOKIE_SECURE=1`. The package supplies `HOST=0.0.0.0`, a default `PORT=8000`, and `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`. A host-supplied port overrides the default. Keep one instance and use `/login` as the health-check path.
+Without a Postgres URL, local use retains SQLite and the existing `recipes.sqlite3` file. Other Docker hosts can also use SQLite with a persistent volume at `/var/data`. This SQLite mount is not used on Vercel.
 
-The ZIP excludes recipe databases, passwords, and local environments. The project database was empty when the package was prepared. If you later need to transfer recipes, do that privately rather than putting the database in the source repository.
+Set `APP_SECRET_KEY` and `APP_PASSWORD_HASH` in Vercel's private Production settings, keep `COOKIE_SECURE=1`, and connect the database with the environment-variable prefix `DATABASE` when the dialog adds `_URL`. This produces `DATABASE_URL`. Keep those credential values out of the source repository.
 
-The pinned image and compatible Linux package downloads were checked. Docker is not installed on this development computer, so the container still needs a build and runtime check on the chosen host. The site has not been published.
+The package supplies `HOST=0.0.0.0`, default `PORT=8000`, and `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`. A host-supplied port overrides the default.
+
+The ZIP excludes databases, private settings, and local environments. Update the extracted source files in `sanfordjd/recipe-ripper` on `main` after the Production settings are configured.
+
+SQLite regression checks passed for sign-in, paste formatting, save, edit, case-insensitive search, exports, and multi-select deletion. Postgres driver options and query mappings were checked with an API test double. A live Neon database connection and Vercel's Container runtime still need verification after deployment. The saved local database was unchanged by these checks.
+
+The browser image and compatible Linux package releases were checked. Docker is not installed on this development computer, so the Linux image has not been built locally.
 
 ## Import behavior and limits
 

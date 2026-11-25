@@ -1,67 +1,32 @@
-# Host Recipe Ripper
+# Host Recipe Ripper on Vercel
 
-Start here when choosing a host. This app needs a running Python service, a browser for automatic recipe imports, and storage for your saved recipes. The hosting package includes setup files for all three. You do not need to install Docker on your computer just to give this package to a host.
+This version uses Vercel's Docker Container runtime and a hosted Postgres database. Local use still defaults to SQLite. The interface and recipe formatting are unchanged.
 
-## What to search for
+## 1. Create and connect the database
 
-Use search terms such as:
+1. In your Vercel project, open **Storage** or **Marketplace**.
+2. Under **Neon**, select **Create**.
+3. Review the plan and price. Choose a region near your Vercel functions.
+4. Leave optional **Auth** and **Realtime** features off. Recipe Ripper already handles sign-in.
+5. Name the database something recognizable, such as `recipe-ripper-db`.
+6. Connect the database to `recipe-ripper-hosting` for **Production**.
+7. In the connection dialog, set the custom environment-variable prefix to `DATABASE` if the suffix shown is `_URL`. This produces `DATABASE_URL`. Keep **Sensitive** enabled. The app also supports the older `POSTGRES_URL` name.
+8. Keep optional preview database branching off for now. Connecting to the Production environment is separate from creating a new database branch for every deployment.
 
-- `Docker web app hosting persistent disk`
-- `Python Flask hosting SQLite persistent storage`
-- `Playwright Chromium container hosting`
+The Neon integration should add `DATABASE_URL` to Vercel's private environment variables. This is the database connection value. Keep it in those settings rather than putting it in source code or a chat message.
 
-Choose a web application hosting service that can build a Dockerfile or run a Docker container. Here are the requirements to check:
+## 2. Add the app's private settings
 
-| Requirement | What it means for this app |
+Open the project's **Environment Variables** settings. Make sure the following values apply to **Production**:
+
+| Setting | Value |
 | --- | --- |
-| Dockerfile builds | The host builds the included `Dockerfile` and runs the app with its Chromium browser. |
-| Persistent disk or volume | Mount it at `/var/data`. Saved recipes must survive service restarts and deployments. |
-| HTTPS | The provider should supply a secure web address and certificate. This is needed for sign-in cookies. |
-| Private environment variables | You enter the app secret and password hash in the host's private settings. |
-| Outbound internet access | The app needs HTTPS access to recipe sites and their page resources. |
-| Memory that can be increased | Compare plans around 2 GB RAM as a suggested starting point for the browser. Peak container memory has not been measured, so confirm this with the provider. |
-| One running instance | This version uses one SQLite database and should run as a single instance. |
-| Long enough request timeout | Automatic importing can take approximately a minute when both attempts run. Confirm the host will allow it. |
-| Storage backups | Check the provider's disk backup options. Also use the app's recipe download feature. |
+| `DATABASE_URL` | Added by the connected Neon integration. The older `POSTGRES_URL` name is also supported. |
+| `APP_SECRET_KEY` | A stable random secret generated below. |
+| `APP_PASSWORD_HASH` | The complete password hash generated below. |
+| `COOKIE_SECURE` | `1` |
 
-You can send a provider this question:
-
-> Can you build and host a Docker web app that runs Python and Playwright Chromium, uses one instance, has a persistent volume mounted at /var/data, supports private environment variables, and provides HTTPS? Can it make outbound web requests and allow imports that may take approximately a minute? The app starts with a volume initialization step, then runs as user ID 10001. Will that work on your service?
-
-The startup script needs permission to initialize the mounted directory before it drops to the ordinary app user. If a provider forces a different user or volume path, the package will need an adjustment for that provider.
-
-Render is one example of a provider with Docker services and persistent disks. Its documentation says persistent disks require a paid service. Other providers may offer different plans. Check the total price, memory, storage, and backup costs before choosing. No host has been chosen or purchased for this package.
-
-## What is in the ZIP
-
-Extract `recipe-ripper-hosting.zip` to a new folder. It contains:
-
-- `app.py` and `templates/index.html`, the app and interface.
-- `Dockerfile` and `docker-entrypoint.sh`, the installation and startup instructions used by a container host.
-- `requirements-hosting.txt`, the exact Python package versions for hosting.
-- `requirements.txt`, the package ranges used for local setup.
-- `.dockerignore` and `.gitignore`, which keep local data and secrets out of builds and source uploads.
-- `HOSTING.md` and `README.md`, the hosting and app guides.
-
-The ZIP excludes your local virtual environment, downloaded Windows browser, recipe database, and passwords. The host obtains the correct Linux browser from the container image. A first hosted launch creates an empty collection. Your local database stays on this computer. If you later need to move local recipes, transfer them privately as a separate step.
-
-## The basic hosting sequence
-
-1. Extract the ZIP. Check that `Dockerfile` is beside `app.py` in the extracted folder.
-2. Choose a host that meets the requirements above.
-3. If the host asks for a source repository, create a private GitHub repository and upload the extracted files with `Dockerfile` at the top level. Some hosts accept a source upload instead.
-4. Create a Docker web service from that source. Use the included Dockerfile and default startup command. You should not need a separate Python build or browser install command.
-5. Add a persistent disk mounted at `/var/data` before using the app. Choose a size appropriate for your recipes and confirm the price.
-6. Set the two required private values described below: `APP_SECRET_KEY` and `APP_PASSWORD_HASH`.
-7. Set the HTTP health-check path to `/login` if the provider offers that setting. Keep one running instance. Configure the provider's request timeout to accommodate automatic imports.
-8. Deploy the service. The provider builds the package, then gives you an HTTPS web address.
-9. Open that address, sign in, and try the checks below. Then open the same address on your phone.
-
-You can use the host's supplied address. You do not need to buy a domain name to start.
-
-## Generate the private settings
-
-Run these commands in PowerShell in the original project folder, where `.venv` is already installed. These commands do not save secrets to files or change the local app's settings. The output is for the host's private settings.
+Run these commands in PowerShell in the original project folder, where `.venv` is installed. They print values without saving them to files.
 
 For `APP_SECRET_KEY`:
 
@@ -69,7 +34,7 @@ For `APP_SECRET_KEY`:
 .\.venv\Scripts\python.exe -B -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Copy the generated value into the host's `APP_SECRET_KEY` field. Keep it stable across deployments so existing sign-in sessions remain valid.
+Copy the generated value into Vercel's `APP_SECRET_KEY` field. Keep it stable across deployments.
 
 For `APP_PASSWORD_HASH`:
 
@@ -77,56 +42,92 @@ For `APP_PASSWORD_HASH`:
 .\.venv\Scripts\python.exe -B -c "import getpass; from werkzeug.security import generate_password_hash; print(generate_password_hash(getpass.getpass('Choose hosted collection password: ')))"
 ```
 
-The password prompt hides what you type. Copy the entire printed hash into the host's `APP_PASSWORD_HASH` field. Sign in to the website with the password you chose, rather than with that hash. Keep the password in your password manager. The app has no password-reset email feature.
+The password prompt hides what you type. Copy the entire printed hash into Vercel's `APP_PASSWORD_HASH` field. Sign in with the password you chose. Keep that password in your password manager.
 
-Enter these values only in the host's private environment settings. They do not belong in your GitHub repository, Dockerfile, ZIP, or chat messages. If your host can generate a random secret for you, it can generate `APP_SECRET_KEY` instead of the first command.
+The package supplies `HOST=0.0.0.0`, a default `PORT=8000`, `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`, and `PYTHONDONTWRITEBYTECODE=1`. Vercel can supply its own port. The local `DATABASE_PATH` setting is ignored when a Postgres connection URL is present.
 
-The package supplies these defaults:
+## 3. Update the connected GitHub repository
 
-| Setting | Default |
-| --- | --- |
-| `HOST` | `0.0.0.0` |
-| `PORT` | `8000`, or the value supplied by your host |
-| `DATABASE_PATH` | `/var/data/recipes.sqlite3` |
-| `COOKIE_SECURE` | `1` |
-| `PLAYWRIGHT_BROWSERS_PATH` | `/ms-playwright` |
-| `PYTHONDONTWRITEBYTECODE` | `1` |
+Extract the updated `recipe-ripper-hosting.zip` to a new folder. In `sanfordjd/recipe-ripper`, update these files from the extracted folder:
 
-Keep these defaults for the included Docker package. In particular, do not copy `COOKIE_SECURE=0` from local testing to HTTPS hosting. The startup script uses the fixed database path above to initialize the persistent disk.
+- `app.py`
+- `docker-entrypoint.sh`
+- `requirements.txt`
+- `requirements-hosting.txt`
+- `HOSTING.md`
+- `README.md`
 
-`TRUSTED_HOSTS` is optional for the first launch. After the provider gives you a hostname, you can restrict it to that hostname, without `https://`. Confirm the provider's health checks still work after that change.
+Add the new `vercel.json` at the repository's top level. It contains:
 
-## Check the first deployment
+```json
+{
+  "framework": "container"
+}
+```
 
-Before relying on the hosted collection:
+Keep `Dockerfile` at the top level and `templates/index.html` inside its folder. The Dockerfile, template, and ignore files are included in the ZIP, even when they have not changed.
 
-1. Sign in on your computer and phone.
-2. Paste a recipe response, review it, and save it.
-3. Refresh the page and confirm the recipe is still there.
-4. Restart or redeploy the hosted service and confirm the recipe remains saved. This checks that the database is on the persistent disk.
-5. Try a URL import. Check the automatic text attempt and final manual fallback when needed. Source sites can still reject both automatic attempts.
-6. Download a recipe backup. Test deleting a sample recipe and confirming a multiple-recipe deletion.
+Commit the changes to `main` after the Production database and private settings are configured. The connected Vercel project can then deploy that commit automatically. Upload the extracted source files, rather than the ZIP itself. Keep recipe databases and secrets out of the repository.
 
-Both people who know the collection password can read, add, edit, and delete recipes. Keep the password private.
+## 4. Check the deployment
 
-## If deployment fails
+The `container` framework setting tells Vercel to build the included Dockerfile, which contains the Playwright browser. It takes precedence over automatic Flask detection. Vercel documents this runtime as beta, so check its current documentation if a setting differs.
 
-- **Missing secret or password hash:** Set both private values, then restart the service.
-- **Cannot write the database:** Confirm the persistent volume is mounted at `/var/data` and the startup script can initialize its ownership.
-- **Recipes disappear after restart:** Confirm `DATABASE_PATH` and the persistent mount. A temporary filesystem is not saved storage.
-- **Automatic browser cannot start:** Check that the service used the Dockerfile and the pinned hosting requirements. Increase memory if the host reports an out-of-memory failure.
-- **Sign-in does not persist:** Use the HTTPS address and keep `COOKIE_SECURE=1`. Keep the app secret stable.
-- **Imports stop before completion:** Check the provider's HTTP request timeout and outbound network access.
+The startup script uses `/tmp` for browser scratch files when Postgres is configured. It does not try to create a local database under `/var/data` on Vercel.
 
-## What has been verified
+In Vercel:
 
-The local app's behavior, automatic browser fallback, and authentication were tested before packaging. The pinned Playwright container image was found in its official registry, and the pinned package releases have compatible Linux downloads. The export ZIP was checked for its exact file list and matching source contents.
+1. Open **Deployments** and wait for the new commit to finish.
+2. Confirm the deployment uses the Container runtime and the correct Git commit.
+3. If needed, use **Redeploy** after changing environment variables. New values apply to new deployments.
+4. Use `/login` as the HTTP health-check path if the provider exposes that setting.
+5. Open the production HTTPS address, `recipe-ripper-hosting.vercel.app`.
 
-Docker is not installed on the development computer, so the Linux image has not been built or run locally. The first deployment must still verify the container build, host permissions, persistent storage, and available memory. This is an export package, not an already published website.
+Your existing build and function memory settings can remain as they are while testing. Container memory has not been measured under production load.
 
-Provider screens, prices, and plans can change. Check the provider's current documentation when you sign up. Verified references used to prepare this package:
+## 5. Test the first hosted recipe
 
-- https://playwright.dev/python/docs/docker
-- https://render.com/docs/docker
-- https://render.com/docs/disks
-- https://render.com/docs/health-checks
+1. Sign in on your computer.
+2. Use **Paste Recipe Text**, review the result, and save a test recipe.
+3. Refresh and confirm it is still present.
+4. Open the website on your phone and confirm you can see the same saved recipe.
+5. Redeploy and confirm the test recipe remains saved. Postgres provides shared storage across function instances and deployments.
+6. Test editing, title search, backup download, and confirmed deletion using sample recipes.
+7. Try URL importing, including its automatic browser attempt and final manual fallback.
+
+Both people who know the collection password can read, add, edit, and delete recipes. A first database connection creates the recipe table automatically. The ZIP contains no local recipe database, so the hosted collection starts empty unless data is separately transferred.
+
+## If something fails
+
+- **Setup is needed:** Check `APP_SECRET_KEY` and `APP_PASSWORD_HASH` for Production, then redeploy.
+- **Saved recipe storage is not configured:** Confirm the database is connected to this project for Production and `DATABASE_URL` is present.
+- **Database connection or permission error:** Review Vercel's runtime logs and the database status. The app needs a Postgres role that can create and use its recipe table.
+- **Browser cannot start:** Confirm the deployment used `vercel.json` and the included Dockerfile. Vercel's automatic Flask runtime alone does not include this browser image.
+- **Import runs out of memory:** Review runtime logs and available memory. Source sites can also reject both automatic attempts.
+- **Sign-in does not persist:** Use HTTPS, keep `COOKIE_SECURE=1`, and keep the app secret stable.
+- **Only Preview received the variables:** Connect the database and private settings to Production and redeploy.
+
+A connection URL contains credentials. Share error descriptions or screenshots with secret values hidden.
+
+## Local use and other container hosts
+
+Without `DATABASE_URL` or `POSTGRES_URL`, the app continues to use the existing local SQLite database. Local PowerShell startup instructions are in README.md.
+
+On another Docker host, either connect hosted Postgres in the same way or use SQLite with a persistent volume mounted at `/var/data`. The SQLite container setup uses `DATABASE_PATH=/var/data/recipes.sqlite3`. Vercel's temporary filesystem is not a persistent volume.
+
+## Package and validation
+
+The ZIP contains the app, template, Docker setup, requirements, ignore files, this guide, README.md, and `vercel.json`. It excludes passwords, local environments, browser downloads, and recipe databases.
+
+SQLite regression checks passed for sign-in, paste formatting, saving, editing, case-insensitive search, exports, and multi-select deletion. Postgres driver options and SQL mappings were checked with an API test double, including bound values, returned IDs, and deletion row-lock queries. Those checks do not replace testing against a live Postgres database.
+
+The local Postgres driver is installed. A live Neon connection and the hosted Container runtime still need verification after you connect the database and deploy. Docker is not installed on this development computer, so the Linux image has not been built locally.
+
+Verified references used for this version:
+
+- https://vercel.com/docs/functions/runtimes/container
+- https://vercel.com/docs/functions/runtimes#file-system-support
+- https://vercel.com/docs/storage
+- https://vercel.com/docs/environment-variables
+- https://neon.com/docs/guides/vercel-managed-integration
+- https://www.psycopg.org/psycopg3/docs/basic/usage.html

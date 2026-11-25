@@ -9,7 +9,10 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.4
 playwright==1.65.2
+psycopg==3.3.9
+psycopg-binary==3.3.9
 soupsieve==2.10
 typing_extensions==4.16.0
 waitress==3.0.2
 Werkzeug==3.1.9
+tzdata==2026.6; sys_platform == 'win32'
