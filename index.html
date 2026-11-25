@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if recipe and recipe.title %}{{ recipe.title }} · {% endif %}Recipe Ripper</title>
+  <style>
+    :root { color-scheme: dark; --ink: #e8eee6; --green: #acd5ae; --paper: #141b17; --line: #435647; --surface: #1e2821; --field: #151f19; --muted: #afbcaf; --button-ink: #132417; --notice: #263c2b; --error: #40271f; --error-line: #aa6e55; --focus: #e3b657; --danger: #f0a18b; --danger-ink: #2b1410; }
+    :root[data-theme="light"] { color-scheme: light; --ink: #26352b; --green: #365f45; --paper: #faf8f2; --line: #d8dfd4; --surface: #ffffff; --field: #ffffff; --muted: #59685b; --button-ink: #ffffff; --notice: #e9f1e5; --error: #fcebe4; --error-line: #d69e87; --focus: #dbab46; --danger: #963b24; --danger-ink: #ffffff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 system-ui, sans-serif; }
+    main { width: min(100% - 32px, 880px); margin: 0 auto; padding-bottom: 70px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 0; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+    .brand { color: var(--ink); text-decoration: none; font-weight: 750; font-size: 22px; }
+    .header-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; }
+    .eyebrow { text-transform: uppercase; font-size: 12px; letter-spacing: .12em; color: var(--muted); font-weight: 750; }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { font-family: Georgia, serif; font-size: clamp(32px, 6vw, 48px); margin: 12px 0 18px; }
+    h2 { font-size: 24px; margin-top: 32px; }
+    a { color: var(--green); overflow-wrap: anywhere; }
+    button, .button { display: inline-block; border: 1px solid var(--green); border-radius: 9px; padding: 12px 18px; color: var(--button-ink); background: var(--green); font: inherit; font-weight: 650; cursor: pointer; text-decoration: none; text-align: center; }
+    .secondary { background: transparent; color: var(--green); }
+    .danger { background: var(--danger); border-color: var(--danger); color: var(--danger-ink); }
+    .danger-link { color: var(--danger); }
+    .button.danger-link { border-color: var(--danger); }
+    input, textarea { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: inherit; background: var(--field); color: var(--ink); }
+    input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+    input:focus, textarea:focus, button:focus-visible, a:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    textarea { min-height: 200px; resize: vertical; line-height: 1.6; }
+    .paste-input { min-height: 320px; }
+    .original-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+    label { display: block; font-weight: 650; margin: 18px 0 6px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+    .row > .grow { flex: 1 1 220px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 18px; }
+    .recipe-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .card, .panel { border: 1px solid var(--line); border-radius: 14px; padding: 24px; background: var(--surface); }
+    .panel { margin: 24px 0; }
+    .card h3 { margin: 0 0 12px; font-size: 21px; }
+    .muted, small { color: var(--muted); }
+    .notice { padding: 14px 18px; border-radius: 8px; background: var(--notice); margin: 18px 0; }
+    .error { background: var(--error); border: 1px solid var(--error-line); }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .recipe-title-list { max-height: 65vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .recipe-choice { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .recipe-choice:last-child { border-bottom: 0; }
+    .recipe-choice input[type="checkbox"] { width: 22px; height: 22px; flex: 0 0 22px; accent-color: var(--green); }
+    .recipe-choice label { margin: 0; cursor: pointer; overflow-wrap: anywhere; }
+    .recipe-select-form .batch-actions { display: none; }
+    .recipe-select-form:has(input[name="recipe_ids"]:checked) .batch-actions { display: flex; }
+    .confirmation-titles { list-style: none; margin: 0; padding: 0; }
+    .confirmation-titles li { padding: 12px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+    .facts { display: flex; gap: 24px; flex-wrap: wrap; padding: 20px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .facts dt { font-size: 13px; color: var(--muted); }
+    .facts dd { margin: 0; font-weight: 650; }
+    li { padding-left: 6px; margin-bottom: 12px; }
+    .recipe-step { margin-bottom: 1.6em; }
+    .step-sentence { display: block; }
+    .source { font-size: 14px; }
+    .login { max-width: 440px; margin: 50px auto; }
+    @media (max-width: 500px) { .panel, .card { padding: 18px; } header { align-items: start; flex-wrap: wrap; } .header-actions { justify-content: flex-start; } .actions > *, .import-button { width: 100%; } }
+    @media print { :root, :root[data-theme="light"] { color-scheme: light; --ink: #000000; --green: #26352b; --paper: #ffffff; --surface: #ffffff; --field: #ffffff; --muted: #333333; --line: #cccccc; } body { background: white; color: black; } main { width: 100%; } header, .actions, .notice, .no-print { display: none; } h1 { font-size: 28px; } .facts { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  {% macro csrf() %}<input type="hidden" name="csrf" value="{{ session.get('csrf', '') }}">{% endmacro %}
+  {% macro paste_form(value='', source_url='') %}
+    <form id="paste-editor" method="post" action="{{ url_for('paste_recipe') }}">{{ csrf() }}<input type="hidden" name="screen" value="paste">
+      {% if source_url %}<input type="hidden" name="fallback_source_url" value="{{ source_url }}">{% endif %}
+      <label for="recipe_text">Recipe text</label>
+      <p class="muted" id="paste-help">Type or paste the whole recipe here, from your own notes, a website, or an AI chat. The app will separate the title, servings, timing, ingredients, and steps for you to review.</p>
+      <textarea class="paste-input" id="recipe_text" name="recipe_text" aria-describedby="paste-help" maxlength="200000" placeholder="Type or paste the complete recipe, including its Ingredients and Instructions headings." required>{{ value }}</textarea>
+      <div class="actions"><button type="submit">Format recipe</button><a class="button secondary" href="{{ url_for('collection') }}">Cancel</a></div>
+    </form>
+  {% endmacro %}
+  <header>
+    <a class="brand" href="{{ url_for('collection') }}">Recipe Ripper</a>
+    <div class="header-actions">
+      {% if session.get('csrf') %}
+        {% if mode in ('editor', 'paste', 'all_recipes', 'delete_many') %}
+          <button class="secondary" type="submit" form="{{ {'editor': 'recipe-editor', 'paste': 'paste-editor', 'all_recipes': 'recipe-select-form', 'delete_many': 'delete-many-confirm'}[mode] }}" formaction="{{ url_for('set_theme') }}" formmethod="post" formnovalidate name="theme" value="{{ 'light' if theme == 'dark' else 'dark' }}" aria-label="Switch to {{ 'light' if theme == 'dark' else 'dark' }} mode">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
+        {% else %}
+          <form method="post" action="{{ url_for('set_theme') }}">{{ csrf() }}<input type="hidden" name="theme" value="{{ 'light' if theme == 'dark' else 'dark' }}"><input type="hidden" name="return_to" value="{{ request.full_path if request.query_string else request.path }}">{% if mode == 'choose' %}<input type="hidden" name="screen" value="choose"><input type="hidden" name="drafts" value="{{ recipes|tojson|forceescape }}">{% endif %}<button class="secondary" type="submit" aria-label="Switch to {{ 'light' if theme == 'dark' else 'dark' }} mode">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button></form>
+        {% endif %}
+      {% endif %}
+      {% if session.get('signed_in') %}<form method="post" action="{{ url_for('logout') }}">{{ csrf() }}<button class="secondary" type="submit">Sign out</button></form>{% endif %}
+    </div>
+  </header>
+  {% for message in get_flashed_messages() %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
+  {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+
+  {% if mode == 'setup' %}
+    <h1>Setup is needed</h1><p>The owner needs to set the sign-in password and app secret before this collection can open.</p><p>Follow the setup instructions in README.md.</p>
+  {% elif mode == 'login' %}
+    <section class="login panel"><div class="eyebrow">Your private collection</div><h1>Welcome to your kitchen.</h1><p class="muted">Sign in to save and read your recipes.</p>
+      <form method="post" action="{{ url_for('login') }}">{{ csrf() }}<label for="password">Collection password</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required><div class="actions"><button type="submit">Sign in</button></div></form>
+    </section>
+  {% elif mode == 'collection' %}
+    <p class="muted">Save the ingredients and steps. Keep the source close by.</p>
+    <section class="panel"><h2 style="margin-top:0">Add a recipe</h2><form method="post" action="{{ url_for('import_recipe') }}">{{ csrf() }}<div class="row"><div class="grow"><label for="source_url">Recipe website URL</label><input id="source_url" name="source_url" type="url" placeholder="https://…" maxlength="4096" required></div><button class="import-button" type="submit">Import recipe</button></div></form><div class="actions"><a class="button secondary" href="{{ url_for('paste_recipe') }}">Paste Recipe Text</a></div><p><small>If the URL import fails, the app automatically tries the page text next. Please wait for the result. You review every recipe before saving. You can also type or paste recipe text yourself.</small></p></section>
+    <h2>Your recipes</h2>
+    <form class="row" method="get" action="{{ url_for('collection') }}"><div class="grow"><label for="q">Search by title</label><input id="q" name="q" value="{{ query }}" maxlength="200" type="search"></div><button class="secondary" type="submit">Search</button><a class="button secondary" href="{{ url_for('all_recipes') }}">See all recipes</a></form><br>
+    <div class="recipe-list">{% for item in recipes %}<article class="card"><h3><a href="{{ url_for('view_recipe', recipe_id=item.id) }}">{{ item.title }}</a></h3>{% if item.servings %}<div class="muted">{{ item.servings }}</div>{% endif %}{% if item.total_time %}<div class="muted">{{ item.total_time|total_time }}</div>{% endif %}<div class="actions"><a class="button secondary danger-link" href="{{ url_for('delete_recipe', recipe_id=item.id) }}" aria-label="Delete {{ item.title }}">Delete recipe</a></div></article>{% else %}<p class="muted">{% if query %}No titles match your search. <a href="{{ url_for('collection') }}">Show all recipes</a>.{% else %}Your recipe box is empty. Paste a URL above to start.{% endif %}</p>{% endfor %}</div>
+    <p><a href="{{ url_for('export') }}">Download a backup of all recipes</a></p>
+  {% elif mode == 'all_recipes' %}
+    <div class="eyebrow">Your saved collection</div><h1>All recipes</h1><p class="muted">Check the recipes you want to delete. You will confirm your selection before anything is removed.</p>
+    <form id="recipe-select-form" class="recipe-select-form" method="post" action="{{ url_for('delete_recipes') }}">{{ csrf() }}<input type="hidden" name="screen" value="all_recipes">
+      {% if recipes %}<div class="recipe-title-list" role="region" aria-label="Saved recipe titles" tabindex="0">{% for item in recipes %}<div class="recipe-choice"><input type="checkbox" id="select-recipe-{{ item.id }}" name="recipe_ids" value="{{ item.id }}"{% if item.id in selected_ids %} checked{% endif %}><label for="select-recipe-{{ item.id }}">{{ item.title }}</label></div>{% endfor %}</div>{% else %}<p class="muted">Your recipe box is empty.</p>{% endif %}
+      <div class="actions batch-actions"><button class="danger" type="submit">Delete recipe(s)</button><button class="secondary" type="reset">Clear selection</button></div>
+    </form><div class="actions"><a class="button secondary" href="{{ url_for('collection') }}">Back to collection</a></div>
+  {% elif mode == 'delete_many' %}
+    <div class="eyebrow">Confirm your selection</div><h1>Delete {{ recipes|length }} recipe{{ 's' if recipes|length != 1 else '' }}?</h1>
+    <section class="panel"><p>The following recipes will be removed from your saved collection. You cannot undo this.</p><ul class="confirmation-titles">{% for item in recipes %}<li>{{ item.title }}</li>{% endfor %}</ul>
+      <form id="delete-many-confirm" method="post" action="{{ url_for('delete_recipes') }}">{{ csrf() }}<input type="hidden" name="screen" value="delete_many"><input type="hidden" name="confirm" value="delete"><input type="hidden" name="confirmation_token" value="{{ confirmation_token }}"><div class="actions"><button class="danger" type="submit">Delete recipe(s)</button><a class="button secondary" href="{{ url_for('all_recipes') }}">Keep recipes</a></div></form>
+    </section>
+  {% elif mode == 'paste' %}
+    <h1>Paste Recipe Text</h1>
+    {% if fallback_source_url %}<section class="panel"><h2 style="margin-top:0">Manual fallback: copy the page text</h2><p>The standard import and automatic text extraction could not finish. You can now copy the text yourself.</p><ol><li><a href="{{ fallback_source_url }}" target="_blank" rel="noopener noreferrer">Open the recipe page</a> in your browser.</li><li>Select all text on that page, then copy it. On Windows, use <kbd>Ctrl+A</kbd>, then <kbd>Ctrl+C</kbd>.</li><li>Paste it into the box below with <kbd>Ctrl+V</kbd>, then select <strong>Format recipe</strong>.</li><li>Review the extracted recipe and select <strong>Save recipe</strong> if it is correct.</li></ol><p class="muted">The source link is kept automatically. Nothing is saved until you approve it.</p></section>{% endif %}
+    <section class="panel">{{ paste_form(pasted_text, fallback_source_url|default('')) }}</section>
+  {% elif mode == 'choose' %}
+    <h1>Choose a recipe</h1><p>This page contains more than one recipe. Choose the one you want to review.</p><div class="grid">{% for item in recipes %}<article class="card"><h3>{{ item.title }}</h3><p class="muted">{{ item.servings }}</p><form method="post" action="{{ url_for('review') }}">{{ csrf() }}<input type="hidden" name="draft" value="{{ item|tojson|forceescape }}"><button type="submit">Review this recipe</button></form></article>{% endfor %}</div>
+  {% elif mode == 'editor' %}
+    <div class="eyebrow">Review before saving</div><h1>{% if recipe.id %}Edit recipe{% else %}Make it yours.{% endif %}</h1><p class="muted">Check quantities and steps against the source. You can change any field.</p>
+    <form id="recipe-editor" method="post" action="{{ url_for('save_recipe') }}">{{ csrf() }}<input type="hidden" name="screen" value="editor">{% if recipe.id %}<input type="hidden" name="recipe_id" value="{{ recipe.id }}">{% endif %}
+      <input type="hidden" name="steps_format" value="sentences-v1">
+      {% if original_text %}<input type="hidden" name="original_text" value="{{ original_text }}">{% endif %}
+      <label for="title">Recipe title</label><input id="title" name="title" value="{{ recipe.title }}" maxlength="500" required>
+      <label for="servings">Servings or yield</label><input id="servings" name="servings" value="{{ recipe.servings }}" placeholder="For example, 8 biscuits" maxlength="500">
+      <div class="grid">{% for field, label in [('prep_time','Preparation time'),('cook_time','Cooking time'),('total_time','Total time')] %}<div><label for="{{ field }}">{{ label }}</label><input id="{{ field }}" name="{{ field }}" value="{{ recipe[field]|total_time if field == 'total_time' else recipe[field] }}"{% if field == 'total_time' %} placeholder="For example, 1 hour 30 minutes"{% endif %} maxlength="500"></div>{% endfor %}</div>
+      <label for="source">Source link</label><input id="source" name="source_url" type="url" value="{{ recipe.source_url }}" maxlength="4096">
+      <label for="ingredients">Ingredients</label><small id="ingredient-help">One ingredient per line. Keep the quantities and units.</small><textarea id="ingredients" name="ingredients" aria-describedby="ingredient-help" maxlength="30000" required>{{ recipe.ingredients }}</textarea>
+      <label for="steps">Cooking steps</label><small id="step-help">Each sentence starts on a new line. Leave a blank line between steps or paragraphs. Keep oven temperatures and cooking times.</small><textarea id="steps" name="steps" aria-describedby="step-help" maxlength="30000" required>{{ recipe.steps }}</textarea>
+      <div class="actions"><button type="submit">Save recipe</button><a class="button secondary" href="{{ url_for('collection') }}">Cancel</a></div>
+    </form>
+    {% if original_text %}<details class="panel"><summary>Original recipe text</summary><pre class="original-text">{{ original_text }}</pre><a href="{{ url_for('paste_recipe') }}">Enter another recipe</a></details>{% endif %}
+  {% elif mode == 'recipe' %}
+    <div class="eyebrow">From your recipe box</div><h1>{{ recipe.title }}</h1>
+    <dl class="facts">{% for field, label in [('servings','Servings / yield'),('prep_time','Preparation'),('cook_time','Cooking'),('total_time','Total')] %}{% if recipe[field] %}<div><dt>{{ label }}</dt><dd>{{ recipe[field]|total_time if field == 'total_time' else recipe[field] }}</dd></div>{% endif %}{% endfor %}</dl>
+    {% if recipe.source_url %}<p class="source">Source: <a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">{{ recipe.source_url }}</a></p>{% endif %}
+    <h2>Ingredients</h2><ul>{% for line in recipe.ingredients.splitlines() %}{% if line.strip() %}<li>{{ line }}</li>{% endif %}{% endfor %}</ul>
+    <h2>Steps</h2><ol>{% for paragraph in recipe|step_paragraphs %}<li class="recipe-step">{% for sentence in paragraph.splitlines() %}<span class="step-sentence">{{ sentence }}</span>{% endfor %}</li>{% endfor %}</ol>
+    <div class="actions"><a class="button" href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">Edit recipe</a><a class="button secondary" href="{{ url_for('collection') }}">All recipes</a><a class="button secondary danger-link" href="{{ url_for('delete_recipe', recipe_id=recipe.id) }}">Delete recipe</a></div><p class="muted no-print">Use your browser’s Print option to print or save this recipe as a PDF.</p>
+  {% elif mode == 'delete' %}
+    <div class="eyebrow">Confirm removal</div><h1>Delete this recipe?</h1>
+    <section class="panel"><h2 style="margin-top:0">{{ recipe.title }}</h2>{% if recipe.source_url %}<p class="source">Source: <a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer">{{ recipe.source_url }}</a></p>{% endif %}<p>This removes the recipe from your saved collection. You cannot undo this.</p>
+      <form method="post" action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}">{{ csrf() }}<input type="hidden" name="confirm" value="delete"><div class="actions"><button class="danger" type="submit">Delete recipe</button><a class="button secondary" href="{{ url_for('view_recipe', recipe_id=recipe.id) }}">Keep recipe</a></div></form>
+    </section>
+  {% elif mode == 'error' %}
+    <h1>That request could not finish.</h1><p><a href="{{ url_for('collection') }}">Return to your collection</a></p>
+  {% endif %}
+</main>
+</body>
+</html>
